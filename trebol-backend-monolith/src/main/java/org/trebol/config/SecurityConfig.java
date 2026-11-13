@@ -72,7 +72,11 @@ public class SecurityConfig {
         this.customersService = customersService;
     }
 
+    // CSRF protection is off on purpose (Sonar rule java:S4502, reviewed): the API keeps no session (STATELESS) and
+    // the JWT travels only in the Authorization header, never in a cookie. Browsers do not attach that header to
+    // cross-site requests by themselves, so a forged request arrives without a token and is rejected (403).
     @Bean
+    @SuppressWarnings("java:S4502")
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
             .authenticationManager(this.authenticationManager())
