@@ -8,6 +8,11 @@ on:
   push:
     branches:
       - main
+    # Documentation-only changes do not release a new revision. (pr.yml keeps running on every pull request: its
+    # checks are required by the branch rules, and a skipped required check would block the merge.)
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   workflow_dispatch:
 
 permissions:
