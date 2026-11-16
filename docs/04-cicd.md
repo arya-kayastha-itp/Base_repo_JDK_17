@@ -41,7 +41,7 @@ flowchart LR
 |---|---|---|
 | `.github/workflows/ci.yml` | Called by the two workflows below (`workflow_call`) | Build, tests, coverage gate, SonarCloud gate, image build, Trivy gate, optional push |
 | `.github/workflows/pr.yml` | Every pull request into `main` | Runs `ci.yml`; image tag `pr-NUMBER-COMMIT`; pushes only for pull requests from branches of this repository |
-| `.github/workflows/deploy.yml` | Push to `main` (except documentation-only changes), manual run | Runs `ci.yml`, then releases the image as a new revision |
+| `.github/workflows/deploy.yml` | Push to `main` that changes the app, its template or the release tooling (`paths` list: application code, `infra/app.bicep`, `infra/app.bicepparam`, `infra/modules/containerapp.bicep`, smoke test, scan exceptions, `ci.yml`, `deploy.yml`, the revision script); manual run | Runs `ci.yml`, then releases the image as a new revision. Infrastructure, schedule and documentation changes release nothing |
 | `.github/workflows/schedule.yml` | Cron on weekdays, manual run (start or stop) | Working-hours schedule of the cost rule |
 | `.github/scripts/aca-revision.sh` | Sourced by deploy and schedule | Revision helpers: current revision, exact traffic split, bounded waits, deactivation |
 | `test-endpoints.sh` | Deploy job | Smoke test; exits non-zero on any failed check and deletes its test data |
@@ -152,6 +152,7 @@ eleven cases (on time, late, past midnight, weekend, next working day).
 | Pull request #4, first run | Build, tests, SonarCloud, image and scan passed; **Azure login failed** (`AADSTS700213`) | GitHub's token subject contains the numeric owner and repository ids; the credentials had the name-only form. Fixed in the Bicep parameters (pull request #4) |
 | Pull request #4, second run | All green; image `pr-4-ff9bd93` pushed through OIDC | Login and push work without a stored password |
 | First `deploy` on `main` | **Stopped at the SonarCloud quality gate**; Azure untouched | The first analysis of `main` judged existing code: security rating D from rule java:S4502 ("CSRF protection disabled"). Reviewed as not applicable (stateless API, token only in the Authorization header, no cookies) and documented in the code with `@SuppressWarnings("java:S4502")` and the reason (pull request #5) |
+| Releases of pull requests #7-#13 (16 Nov) | All successful, about 10 minutes each | From pull request #8 on, the release deploys the app's own template (`infra/app.bicep`); pull request #12's release applied the Flyway migration V3 to the cloud database while the old revision kept serving; pull request #13's release ran under load (zero-downtime test, [06-load-test.md](06-load-test.md), section 8) |
 | `deploy` after pull request #5 | **Success** in 13.4 minutes: build 127 s, image 122 s, release 324 s; rollback skipped | New revision `trebol-api--r2-1-63ac839` with 100% of the traffic and 1 healthy replica; previous revision deactivated with 0 replicas; traffic list with exactly one entry; public health endpoints 200; no test data left behind |
 
 ## 9. Operating the pipeline

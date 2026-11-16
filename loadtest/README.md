@@ -50,7 +50,9 @@ jmeter -n -t loadtest/trebol-load.jmx -Jhost=APP_HOST -Jusers=10000 -Jrampup=600
   -l results/run.jtl -e -o results/report
 ```
 
-PowerShell (the same with backticks): replace `\` by `` ` `` at the line ends, or write it on one line.
+PowerShell: replace `\` by `` ` `` at the line ends (or write it on one line) and **quote every `-J` argument that
+contains a dot**, for example `'-Jhost=my-app.example.net'`. PowerShell splits an unquoted argument that starts with
+`-` at its first dot, and JMeter then stops with "Unknown arg".
 
 Local check against the compose stack (`docker compose up -d`, see `docs/02-container.md`):
 
@@ -103,4 +105,7 @@ for roughly one to two hours at full scale: plan a single window of about one ho
 
 Small runs from the engineer's laptop against the Azure URL, inside working hours: a few hundred users at most, plus
 the login burst to show CPU-based scaling (1 -> 3 replicas and back), the dashboard under load and a fired alert.
-Results and the scaling timeline are recorded in the test report (`docs/06-load-test.md`).
+Results, the scaling timeline and the tuning recommendations are in the test report
+([docs/06-load-test.md](../docs/06-load-test.md)). Two lessons from the first run (16 Nov 2026, 165 users,
+80 requests per second): the 0.1 GB/day Log Analytics cap was reached after 17 minutes (raise it for any longer
+test), and a laptop's network can stall all requests at once (the official test should run from a data centre).

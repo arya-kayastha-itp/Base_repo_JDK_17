@@ -74,6 +74,9 @@ names stay stable if the resource group moves to another subscription; `-si` mar
 |---|---|---|---|---|---|
 | Cost budget | `budget-trebol-poc` | - | 4,000 INR for 1 Nov 2026 - 31 Oct 2027 as one annual period (the project total); e-mail alerts at 50, 80 and 100% of actual cost and at 100% of forecast cost | Cost guardrail; the amount is in the billing currency (INR) and stays below 50 USD | Monthly budget, which would allow the full amount again every month |
 | Log Analytics workspace | `log-trebol-poc` | Central India | Pay per GB, 30 days retention, daily ingestion cap 0.1 GB | Central store for container and platform logs; the cap protects the budget (raised temporarily for the evaluation) | Higher cap from the start |
+| Application Insights | `appi-trebol-poc` | Central India | Workspace-based (data in `log-trebol-poc`); connection string written straight into Key Vault | Request, dependency and exception telemetry with percentiles ([05-scaling-monitoring.md](05-scaling-monitoring.md)) | Platform metrics only (no latency percentiles) |
+| Alerts | `ag-trebol-poc`, `alert-trebol-*` | global / Central India | One e-mail action group, four metric alerts, two log alerts | Alert strategy in [05-scaling-monitoring.md](05-scaling-monitoring.md), section 10 | - |
+| Workbook | "Trebol API operations" | Central India | Azure Monitor workbook | Operations dashboard | Azure portal dashboard, Grafana |
 | Virtual network | `vnet-trebol-poc-si` | South India | 10.20.0.0/16; `snet-aca` 10.20.0.0/23 delegated to Container Apps; `snet-mysql` 10.20.2.0/24 delegated to MySQL; subnets declared inside the network resource | Private path from the app to the database. /23 leaves room for 25 replicas with two revisions side by side and cannot be resized once in use | Public MySQL endpoint with a firewall |
 | Private DNS zone | `trebol-poc.private.mysql.database.azure.com` | global | Linked to the network, automatic registration off | Resolves the MySQL server name to its private address, only inside linked networks | Zone created implicitly by Azure (less control over its name and lifecycle) |
 | Managed identities | `id-trebol-github`, `id-trebol-app` | Central India | User-assigned | No passwords; separate privileges for the pipeline and for the running app | Service principal with a client secret |
@@ -181,6 +184,12 @@ $env:TREBOL_OWNER_TAG       = 'value of the owner tag'
 $env:TREBOL_BUDGET_EMAIL    = 'address that receives the budget alerts'
 $env:TREBOL_SUBSCRIPTION_ID = $sub   # used to locate the Key Vault secret
 ```
+
+**MySQL must be running.** Every deployment of `main.bicep` re-sends all resources, including the MySQL server, and
+Azure refuses to update a stopped server (`ServerNotExist`). Deploy on a weekday during working hours, or after the
+schedule's manual start; check first with
+`az mysql flexible-server show --subscription $sub --resource-group rg-trebol-poc --name mysql-trebol-poc-si-ttuu --query state`
+(expected: `Ready`).
 
 **Preview, then deploy** (always incremental: resources not in the template are never removed):
 
