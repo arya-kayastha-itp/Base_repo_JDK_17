@@ -26,6 +26,9 @@ param appInsightsSecretName = 'appinsights-connection-string'
 param cpu = '1.0'
 param memory = '2Gi'
 param maxReplicas = 3
+// Scale out at 100 requests in flight per replica or 70% average CPU, whichever comes first
+param concurrentRequestsPerReplica = 100
+param cpuUtilizationPercent = 70
 
 param containerImage = readEnvironmentVariable('TREBOL_APP_IMAGE', '')
 param revisionSuffix = readEnvironmentVariable('TREBOL_APP_REVISION_SUFFIX', '')

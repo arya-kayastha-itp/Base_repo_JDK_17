@@ -47,6 +47,9 @@ param maxReplicas int
 @description('Concurrent HTTP requests per replica before another replica is added.')
 param concurrentRequestsPerReplica int = 100
 
+@description('Average CPU utilisation (% of the replica\'s CPU) above which replicas are added.')
+param cpuUtilizationPercent int = 70
+
 @description('Name suffix of the revision this deployment creates (empty: Azure chooses one if the template changed).')
 param revisionSuffix string = ''
 
@@ -201,12 +204,25 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
       scale: {
         minReplicas: minReplicas
         maxReplicas: maxReplicas
+        // Two rules; the replica count follows whichever asks for more. HTTP concurrency reacts to the number of
+        // requests in flight (and can wake the app from zero); CPU reacts to expensive requests such as logins
+        // (password hashing), where few concurrent requests already fill a vCPU.
         rules: [
           {
             name: 'http-concurrency'
             http: {
               metadata: {
                 concurrentRequests: string(concurrentRequestsPerReplica)
+              }
+            }
+          }
+          {
+            name: 'cpu-utilization'
+            custom: {
+              type: 'cpu'
+              metadata: {
+                type: 'Utilization'
+                value: string(cpuUtilizationPercent)
               }
             }
           }
