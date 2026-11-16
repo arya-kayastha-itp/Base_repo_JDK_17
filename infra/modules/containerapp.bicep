@@ -161,6 +161,13 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'APPLICATIONINSIGHTS_ROLE_NAME'
               value: 'trebol-api'
             }
+            {
+              // Do not forward Spring Boot's Micrometer metrics (JVM memory and threads, logback events, HTTP and
+              // repository timers): they duplicate the Container Apps platform metrics and filled the 0.1 GB/day
+              // Log Analytics cap during the first load test. Requests, dependencies and exceptions stay.
+              name: 'APPLICATIONINSIGHTS_INSTRUMENTATION_MICROMETER_ENABLED'
+              value: 'false'
+            }
           ]
           // Same order as Azure stores them (Liveness, Readiness, Startup), so previews show no false differences
           probes: [
