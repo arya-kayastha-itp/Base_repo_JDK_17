@@ -75,3 +75,7 @@ param mysqlAdminPassword = az.getSecret(readEnvironmentVariable('TREBOL_SUBSCRIP
 // infra/app.bicep + infra/app.bicepparam, deployed by the release pipeline.
 param containerAppsEnvName = 'cae-trebol-poc'
 param containerAppsInfraResourceGroupName = 'rg-trebol-poc-aca-infra'
+
+// Phase 5: Application Insights (stored in log-trebol-poc); its connection string goes straight into Key Vault
+param appInsightsName = 'appi-trebol-poc'
+param appInsightsSecretName = 'appinsights-connection-string'

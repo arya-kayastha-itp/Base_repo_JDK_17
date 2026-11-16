@@ -23,6 +23,7 @@ param mysqlDatabaseName string
 param dbUser string
 param dbPasswordSecretName string
 param jwtSecretName string
+param appInsightsSecretName string
 
 @description('Full image reference, for example myregistry.azurecr.io/trebol-api:abc1234.')
 @minLength(1)
@@ -63,6 +64,7 @@ module containerApp 'modules/containerapp.bicep' = {
     keyVaultUri: 'https://${keyVaultName}${environment().suffixes.keyvaultDns}/'
     dbPasswordSecretName: dbPasswordSecretName
     jwtSecretName: jwtSecretName
+    appInsightsSecretName: appInsightsSecretName
     dbHost: '${mysqlServerName}.mysql.database.azure.com'
     dbName: mysqlDatabaseName
     dbUser: dbUser

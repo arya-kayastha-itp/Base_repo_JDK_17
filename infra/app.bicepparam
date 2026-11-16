@@ -19,6 +19,8 @@ param mysqlDatabaseName = 'trebol'
 param dbUser = 'trebol_admin'
 param dbPasswordSecretName = 'mysql-admin-password'
 param jwtSecretName = 'jwt-secret-key'
+// Written into Key Vault by main.bicep (Application Insights module); read by the monitoring agent
+param appInsightsSecretName = 'appinsights-connection-string'
 
 // Development envelope: 1 vCPU / 2 GiB, at most 3 replicas (raised for the evaluation through a pull request)
 param cpu = '1.0'

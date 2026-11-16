@@ -89,6 +89,10 @@ param mysqlAdminPassword string
 param containerAppsEnvName string
 param containerAppsInfraResourceGroupName string
 
+@description('Application Insights name and the Key Vault secret that receives its connection string.')
+param appInsightsName string
+param appInsightsSecretName string
+
 module monitoring 'modules/monitoring.bicep' = {
   name: 'monitoring'
   params: {
@@ -189,6 +193,24 @@ module containerAppsEnv 'modules/containerapps-env.bicep' = {
     infrastructureSubnetId: resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, acaSubnetName)
     logAnalyticsName: logAnalyticsName
     infrastructureResourceGroupName: containerAppsInfraResourceGroupName
+  }
+}
+
+// Phase 5: telemetry of the app. Workspace and vault ids are computed from names (validate and what-if can evaluate
+// the module in advance); dependsOn keeps the order.
+module appInsights 'modules/appinsights.bicep' = {
+  name: 'appinsights'
+  dependsOn: [
+    monitoring
+    keyVault
+  ]
+  params: {
+    name: appInsightsName
+    location: location
+    tags: tags
+    workspaceId: resourceId('Microsoft.OperationalInsights/workspaces', logAnalyticsName)
+    keyVaultName: keyVaultName
+    connectionStringSecretName: appInsightsSecretName
   }
 }
 

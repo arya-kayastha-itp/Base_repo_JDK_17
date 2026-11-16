@@ -26,9 +26,10 @@ param identityId string
 @description('Key Vault URI ending with a slash, for example https://myvault.vault.azure.net/.')
 param keyVaultUri string
 
-@description('Key Vault secret names for the database password and the JWT signing key.')
+@description('Key Vault secret names for the database password, the JWT signing key and the Application Insights connection string.')
 param dbPasswordSecretName string
 param jwtSecretName string
+param appInsightsSecretName string
 
 @description('MySQL host name, database name and user.')
 param dbHost string
@@ -101,6 +102,11 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
           keyVaultUrl: '${keyVaultUri}secrets/${jwtSecretName}'
           identity: identityId
         }
+        {
+          name: 'appinsights-connection-string'
+          keyVaultUrl: '${keyVaultUri}secrets/${appInsightsSecretName}'
+          identity: identityId
+        }
       ]
     }
     template: {
@@ -136,6 +142,21 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'TREBOL_SECURITY_JWTSECRETKEY'
               secretRef: 'jwt-secret-key'
+            }
+            {
+              // Loads the Application Insights Java agent shipped in the image (read by the java launcher, in
+              // addition to the image's JAVA_TOOL_OPTIONS); local runs do not set it, so they run without the agent
+              name: 'JDK_JAVA_OPTIONS'
+              value: '-javaagent:/app/applicationinsights-agent.jar'
+            }
+            {
+              name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+              secretRef: 'appinsights-connection-string'
+            }
+            {
+              // Name of the app in Application Insights (application map, filters)
+              name: 'APPLICATIONINSIGHTS_ROLE_NAME'
+              value: 'trebol-api'
             }
           ]
           // Same order as Azure stores them (Liveness, Readiness, Startup), so previews show no false differences
