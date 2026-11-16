@@ -93,6 +93,16 @@ param containerAppsInfraResourceGroupName string
 param appInsightsName string
 param appInsightsSecretName string
 
+@description('Name of the container app (deployed by infra/app.bicep) and its name in Application Insights.')
+param appName string
+param appRoleName string
+
+@description('Alerts: action group, e-mail addresses, the app\'s maximum replicas and MySQL max_connections.')
+param actionGroupName string
+param alertEmails array
+param alertMaxReplicas int
+param mysqlMaxConnections int
+
 module monitoring 'modules/monitoring.bicep' = {
   name: 'monitoring'
   params: {
@@ -211,6 +221,46 @@ module appInsights 'modules/appinsights.bicep' = {
     workspaceId: resourceId('Microsoft.OperationalInsights/workspaces', logAnalyticsName)
     keyVaultName: keyVaultName
     connectionStringSecretName: appInsightsSecretName
+  }
+}
+
+// Phase 5: alerts and the operations dashboard. They watch the app deployed by app.bicep (it must exist), MySQL and
+// the Application Insights data in the workspace.
+module alerts 'modules/alerts.bicep' = {
+  name: 'alerts'
+  dependsOn: [
+    monitoring
+    mysql
+    appInsights
+  ]
+  params: {
+    location: location
+    tags: tags
+    actionGroupName: actionGroupName
+    alertEmails: alertEmails
+    workspaceId: resourceId('Microsoft.OperationalInsights/workspaces', logAnalyticsName)
+    appId: resourceId('Microsoft.App/containerApps', appName)
+    mysqlId: resourceId('Microsoft.DBforMySQL/flexibleServers', mysqlServerName)
+    appRoleName: appRoleName
+    maxReplicas: alertMaxReplicas
+    mysqlMaxConnections: mysqlMaxConnections
+  }
+}
+
+module workbook 'modules/workbook.bicep' = {
+  name: 'workbook'
+  dependsOn: [
+    monitoring
+    mysql
+    appInsights
+  ]
+  params: {
+    location: location
+    tags: tags
+    workspaceId: resourceId('Microsoft.OperationalInsights/workspaces', logAnalyticsName)
+    appId: resourceId('Microsoft.App/containerApps', appName)
+    mysqlId: resourceId('Microsoft.DBforMySQL/flexibleServers', mysqlServerName)
+    appRoleName: appRoleName
   }
 }
 
