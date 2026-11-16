@@ -79,3 +79,15 @@ param containerAppsInfraResourceGroupName = 'rg-trebol-poc-aca-infra'
 // Phase 5: Application Insights (stored in log-trebol-poc); its connection string goes straight into Key Vault
 param appInsightsName = 'appi-trebol-poc'
 param appInsightsSecretName = 'appinsights-connection-string'
+
+// Phase 5: alerts (e-mail to the same address as the budget alerts) and the operations workbook
+param appName = 'trebol-api'
+param appRoleName = 'trebol-api'
+param actionGroupName = 'ag-trebol-poc'
+param alertEmails = [
+  readEnvironmentVariable('TREBOL_BUDGET_EMAIL')
+]
+// Must match maxReplicas in app.bicepparam (raise both for the evaluation)
+param alertMaxReplicas = 3
+// MySQL Burstable B1ms default (checked 16 Nov 2026); the connections alert fires above 80% of it
+param mysqlMaxConnections = 171

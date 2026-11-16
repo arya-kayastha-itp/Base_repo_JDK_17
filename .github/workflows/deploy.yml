@@ -9,12 +9,20 @@ on:
   push:
     branches:
       - main
-    # Documentation-only and schedule-only changes do not release a new revision. (pr.yml keeps running on every pull request: its
-    # checks are required by the branch rules, and a skipped required check would block the merge.)
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
-      - '.github/workflows/schedule.yml'
+    # Release only when something the running app depends on changes: its code, its own template, the release
+    # tooling. Documentation, the schedule and the infrastructure template (main.bicep, deployed by the engineer) do
+    # not release a new revision. (pr.yml keeps running on every pull request: its checks are required by the branch
+    # rules, and a skipped required check would block the merge.)
+    paths:
+      - 'trebol-backend-monolith/**'
+      - 'infra/app.bicep'
+      - 'infra/app.bicepparam'
+      - 'infra/modules/containerapp.bicep'
+      - 'test-endpoints.sh'
+      - '.trivyignore.yaml'
+      - '.github/workflows/deploy.yml'
+      - '.github/workflows/ci.yml'
+      - '.github/scripts/aca-revision.sh'
   workflow_dispatch:
 
 permissions:
