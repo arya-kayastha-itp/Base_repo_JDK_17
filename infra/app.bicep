@@ -40,6 +40,10 @@ param memory string
 param minReplicas int
 param maxReplicas int
 
+@description('Scale rules: concurrent requests per replica and average CPU utilisation (%) that add replicas.')
+param concurrentRequestsPerReplica int
+param cpuUtilizationPercent int
+
 @description('Traffic split for this deployment.')
 param traffic array
 
@@ -72,6 +76,8 @@ module containerApp 'modules/containerapp.bicep' = {
     memory: memory
     minReplicas: minReplicas
     maxReplicas: maxReplicas
+    concurrentRequestsPerReplica: concurrentRequestsPerReplica
+    cpuUtilizationPercent: cpuUtilizationPercent
     revisionSuffix: revisionSuffix
     traffic: traffic
   }

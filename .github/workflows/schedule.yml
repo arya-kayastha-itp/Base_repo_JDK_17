@@ -43,7 +43,9 @@ env:
   RESOURCE_GROUP: rg-trebol-poc
   APP_NAME: trebol-api
   MYSQL_SERVER: mysql-trebol-poc-si-ttuu
-  DAY_MIN_REPLICAS: '1'
+  # Daytime minimum replicas: repository variable TREBOL_DAY_MIN_REPLICAS (Settings, Secrets and variables, Actions,
+  # Variables). 1 during development; 2 for the demo and the evaluation (high availability); 1 when it is not set.
+  DAY_MIN_REPLICAS: ${{ vars.TREBOL_DAY_MIN_REPLICAS || '1' }}
 
 jobs:
   run:
