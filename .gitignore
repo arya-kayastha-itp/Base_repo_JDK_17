@@ -3,3 +3,6 @@
 *.local.md
 # Local docker compose values (copy .env.example to .env)
 .env
+# JMeter results and HTML reports (loadtest/README.md)
+/results/
+/loadtest/results/
