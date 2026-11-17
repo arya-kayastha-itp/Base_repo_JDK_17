@@ -3,6 +3,8 @@
 #   image) -> smoke test on the revision's own URL -> canary: 10% of the traffic for 2 minutes -> 100% and the old
 #   revision deactivated.
 # Any failure after the new revision exists rolls back: 100% to the old revision, the new one deactivated.
+# Repository variable TREBOL_EVALUATION ('true' only during the evaluation window) is passed to infra/app.bicepparam:
+# replicas of 2 vCPU / 4 GiB, at most 20. A manual run of this workflow applies a changed value.
 name: deploy
 
 on:
@@ -60,6 +62,7 @@ jobs:
       cancel-in-progress: false
     env:
       IMAGE: ${{ needs.ci.outputs.image }}
+      TREBOL_EVALUATION: ${{ vars.TREBOL_EVALUATION || 'false' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -74,9 +77,6 @@ jobs:
 
       - name: Create the new revision with 0% of the traffic
         id: rev
-        env:
-          # Repository variable: 'true' during the evaluation window (larger replicas, see infra/app.bicepparam)
-          TREBOL_EVALUATION: ${{ vars.TREBOL_EVALUATION || 'false' }}
         run: |
           az config set extension.use_dynamic_install=yes_without_prompt --only-show-errors
           source .github/scripts/aca-revision.sh
