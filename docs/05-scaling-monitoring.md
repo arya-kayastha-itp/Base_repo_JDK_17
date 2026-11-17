@@ -176,7 +176,7 @@ arrived. The action group can also be tested on demand from the portal (Monitor,
 | Application Insights counts every 4xx response as "failed" | The error alert and the dashboard use 5xx only |
 | The 0.1 GB/day cap was reached 17 minutes into a 25-minute test; afterwards no logs or telemetry until the daily reset, and the log alerts were blind (metric alerts kept working) | Micrometer forwarding switched off; the cap is raised for the evaluation window |
 | An infrastructure deployment (`main.bicep`) failed while MySQL was stopped, because every deployment re-sends the database server | Infrastructure is deployed only while MySQL runs (weekdays during working hours) |
-| The working-hours schedule ran 5.5 hours late once, and one start never ran | Backup triggers and a clock check in `schedule.yml` ([04-cicd.md](04-cicd.md), section 5) |
+| GitHub's scheduler started the working-hours runs 5.5 to 10 hours late, and one start never ran | Backup triggers and a clock check in `schedule.yml` (a 10-hour-late start was correctly skipped); moving the schedule into Azure is recommended ([04-cicd.md](04-cicd.md), section 5) |
 
 ## 12. Limitations and next steps
 

@@ -111,6 +111,12 @@ everything on at night; a **stop** acts only outside the working window (weekday
 interrupt work. Skipped runs say why in their summary. Manual runs always act. The decision logic was tested with
 eleven cases (on time, late, past midnight, weekend, next working day).
 
+In the night of 16-17 Nov the check proved its worth: Monday's 14:15 start arrived about 10 hours late (00:05 IST)
+and was skipped; the 22:00 stop arrived about 8 hours late (05:51 IST), so the database and one idle replica ran
+through the night (well under 1 USD). GitHub's scheduler is therefore not reliable enough for cost control on its own:
+moving start and stop into Azure (a scheduled Container Apps job using the pipeline identity) is the recommended next
+step; until then, the engineer runs `stop` manually at the end of the day when it matters.
+
 ## 6. Security of the pipeline
 
 - **Azure login without a password (OIDC).** GitHub issues each run a short-lived signed token describing the run.
@@ -175,4 +181,4 @@ eleven cases (on time, late, past midnight, weekend, next working day).
 | Canary signal | Readiness and health of the new revision during 2 minutes at 10% (little real traffic outside tests) | Error rate and latency from Application Insights as promotion criteria (monitoring phase) |
 | Required checks not strict | A pull request does not have to be up to date with `main` before merging | The release re-runs all gates on the merge commit anyway; enable "strict" if merges become frequent |
 | SonarCloud first-analysis behaviour | The first analysis of a branch judges existing code | Nothing to do: later analyses judge new code only |
-| Scheduler timing | GitHub scheduled runs can start hours late; backup triggers and the clock check limit the effect | An Azure Container Apps scheduled job (runs inside Azure, on time) if the delays continue |
+| Scheduler timing | GitHub scheduled runs started 5.5 to 10 hours late; backup triggers and the clock check prevent wrong starts, but a late stop leaves resources running | **Recommended:** an Azure Container Apps scheduled job (runs inside Azure, on time) |
