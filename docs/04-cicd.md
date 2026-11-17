@@ -93,7 +93,7 @@ rolls back. Run the schedule's "start" first in that case.
 
 | Time (IST) | Cron (UTC) | Action |
 |---|---|---|
-| 13:45 Monday-Friday | `15 8 * * 1-5` | Start MySQL (waits until it runs), then move the app to a revision with the daytime minimum: repository variable `TREBOL_DAY_MIN_REPLICAS`, 1 in development, 2 for the demo and the evaluation (1 when not set) |
+| 13:45 Monday-Friday | `15 8 * * 1-5` | Start MySQL (waits until it runs), then move the app to a revision with the daytime minimum: repository variable `TREBOL_DAY_MIN_REPLICAS`, 1 in development, 2 for the demo, 4 for the evaluation (1 when not set). A second repository variable, `TREBOL_EVALUATION`, is read by the release: `true` deploys replicas of 2 vCPU / 4 GiB with at most 20 (`infra/app.bicepparam`) |
 | 14:15 Monday-Friday | `45 8 * * 1-5` | Backup of the start (changes nothing if the start already ran) |
 | 22:00 Monday-Friday | `30 16 * * 1-5` | Move the app to a revision with 0 minimum replicas, then stop MySQL |
 | 00:00 Tuesday-Saturday | `30 18 * * 1-5` | Backup of the stop |

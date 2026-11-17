@@ -161,3 +161,19 @@ finishing its last requests; the graceful shutdown let every in-flight request c
 - The live view during the test: Azure Monitor workbook "Trebol API operations"
   ([05-scaling-monitoring.md](05-scaling-monitoring.md), section 9).
 - Each virtual user creates one customer account (random name and password); no shared credentials are needed.
+
+## 11. Tuning for the evaluation (17-18 Nov)
+
+The evaluation target was set to a peak of 2,500 requests per second, raised step by step until the system breaks.
+Recommendations 1-5 and 7 of section 9 were carried out:
+
+| Change | Recommendation | Effect (measured on a local MySQL 8.4 with the load test's requests, 20 calls each) |
+|---|---|---|
+| Hibernate batch fetching (`default_batch_fetch_size=50`) | 1 | Product page 13 -> 4 queries, list contents 24 -> 6; average per browse request 8.9 -> 3.5 |
+| Page size capped at 50 (was 1,000) | 1 | One request can no longer load a whole table |
+| Catalog cache: public reads of products, categories and lists kept 30 s per replica; staff always read live data | 1 | Cached reads need no database query (categories and list contents 0.05 queries per call); in steady state about 0.5 queries per browse request (estimate) |
+| One shared JSON reader in the login filter | 7 | Less work per login |
+| Evaluation switch `TREBOL_EVALUATION`: replicas 2 vCPU / 4 GiB up to 20, warm minimum 4, MySQL General Purpose D4ads_v5 with Autoscale IOPS, log cap 1 GB | 2-5 | Capacity per level and the expected break point: [08-scalability-plan.md](08-scalability-plan.md) |
+
+Build: 381 tests passed; smoke test 48/48 on MySQL. The evaluators' results and the break point found will be added
+here after the test.

@@ -91,6 +91,7 @@ Azure login uses OIDC federated credentials: no Azure password is stored anywher
 | [05-scaling-monitoring.md](docs/05-scaling-monitoring.md) | Scaling and availability strategy, probes, logs and telemetry, dashboard, alert strategy |
 | [06-load-test.md](docs/06-load-test.md) | Load test report, capacity estimate and tuning recommendations |
 | [07-cost.md](docs/07-cost.md) | Cost analysis: measured cost, projection, evaluation window, teardown |
+| [08-scalability-plan.md](docs/08-scalability-plan.md) | Scalability plan: capacity model, levels from 2,500 requests per second upwards, levers, how to read the break point |
 | [loadtest/README.md](loadtest/README.md) | How to run the JMeter plan; evaluation-window runbook |
 
 ## Status (16 Nov 2026)
