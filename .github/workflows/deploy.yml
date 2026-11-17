@@ -74,6 +74,9 @@ jobs:
 
       - name: Create the new revision with 0% of the traffic
         id: rev
+        env:
+          # Repository variable: 'true' during the evaluation window (larger replicas, see infra/app.bicepparam)
+          TREBOL_EVALUATION: ${{ vars.TREBOL_EVALUATION || 'false' }}
         run: |
           az config set extension.use_dynamic_install=yes_without_prompt --only-show-errors
           source .github/scripts/aca-revision.sh

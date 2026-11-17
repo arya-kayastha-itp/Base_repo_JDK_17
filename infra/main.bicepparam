@@ -6,7 +6,12 @@
 //   $env:TREBOL_SUBSCRIPTION_ID = 'subscription id (used to locate the Key Vault secret)'
 //   $env:TREBOL_GITHUB_REPO     = 'owner@ownerId/name@repoId of the GitHub repository allowed to deploy'
 //     (the form GitHub uses in its OIDC token subject; the ids come from https://api.github.com/repos/OWNER/NAME)
+// Evaluation window (load test by the evaluators): $env:TREBOL_EVALUATION = 'true' switches the values marked
+// "evaluation" below; remove it (or set 'false') and deploy again afterwards. The GitHub repository variable of the
+// same name switches the app's size in infra/app.bicepparam: set both, so the alerts match the app.
 using './main.bicep'
+
+var evaluation = readEnvironmentVariable('TREBOL_EVALUATION', 'false') == 'true'
 
 param location = 'centralindia'
 // The network, MySQL and Container Apps run in South India: MySQL Flexible Server is not available to this
@@ -22,8 +27,8 @@ param tags = {
 
 param logAnalyticsName = 'log-trebol-poc'
 // 0.1 GB/day keeps the worst case at about 3 GB/month inside the 50 USD project total.
-// Raise it temporarily (with approval) for the evaluation window, when the dashboard must show the load test.
-param logAnalyticsDailyCapGb = '0.1'
+// Evaluation: 1 GB for the day, so the dashboard and the log alerts keep working during the load test.
+param logAnalyticsDailyCapGb = evaluation ? '1' : '0.1'
 
 // Project limit: 50 USD in total (1 Nov 2026 - 31 Oct 2027). Budget amounts are in the billing currency, and this
 // subscription is billed in INR: 4,000 INR stays below 50 USD at any realistic exchange rate, so the alerts
@@ -59,7 +64,12 @@ param githubRepository = readEnvironmentVariable('TREBOL_GITHUB_REPO')
 param registryName = 'acrtrebolpocttuu'
 param keyVaultName = 'kv-trebol-poc-ttuu'
 
-// Stage 4: MySQL Flexible Server, Burstable B1ms (module defaults), private access only.
+// Stage 4: MySQL Flexible Server, private access only. Development: Burstable B1ms (1 vCore, 2 GiB, 171 connections,
+// fixed 360 IOPS). Evaluation: General Purpose D4ads_v5 (4 vCores at full speed, 16 GiB, 1,365 connections) with
+// Autoscale IOPS. Changing the compute restarts the server (usually 60-120 s): deploy only while MySQL is running.
+param mysqlSkuName = evaluation ? 'Standard_D4ads_v5' : 'Standard_B1ms'
+param mysqlSkuTier = evaluation ? 'GeneralPurpose' : 'Burstable'
+param mysqlAutoIoScaling = evaluation ? 'Enabled' : 'Disabled'
 // The administrator password is read by Azure Resource Manager directly from Key Vault during the deployment
 // (the vault is enabled for template deployment): it never appears in a shell, a file or the deployment history.
 // '-si' = South India: Azure Resource Manager keeps the first name (failed create in Central India, 13 Nov) tied to
@@ -87,7 +97,8 @@ param actionGroupName = 'ag-trebol-poc'
 param alertEmails = [
   readEnvironmentVariable('TREBOL_BUDGET_EMAIL')
 ]
-// Must match maxReplicas in app.bicepparam (raise both for the evaluation)
-param alertMaxReplicas = 3
-// MySQL Burstable B1ms default (checked 16 Nov 2026); the connections alert fires above 80% of it
-param mysqlMaxConnections = 171
+// Must match maxReplicas in app.bicepparam (both follow TREBOL_EVALUATION)
+param alertMaxReplicas = evaluation ? 20 : 3
+// max_connections default of the MySQL size (B1ms 171, D4ads_v5 1,365; Microsoft Learn, server parameters);
+// the connections alert fires above 80% of it
+param mysqlMaxConnections = evaluation ? 1365 : 171
