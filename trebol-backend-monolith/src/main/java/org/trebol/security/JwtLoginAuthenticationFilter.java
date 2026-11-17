@@ -21,6 +21,7 @@
 package org.trebol.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -37,6 +38,9 @@ import java.io.IOException;
 
 public class JwtLoginAuthenticationFilter
     extends GenericJwtAuthenticationFilter {
+    // One reader for every login request instead of a new ObjectMapper per request (logins are the busiest
+    // CPU path). An ObjectReader is immutable and thread-safe; its settings are the same as before.
+    private static final ObjectReader LOGIN_READER = new ObjectMapper().readerFor(LoginPojo.class);
     private final AuthenticationManager authenticationManager;
 
     public JwtLoginAuthenticationFilter(
@@ -55,7 +59,7 @@ public class JwtLoginAuthenticationFilter
             return null;
         } else {
             try {
-                LoginPojo userData = new ObjectMapper().readValue(request.getInputStream(), LoginPojo.class);
+                LoginPojo userData = LOGIN_READER.readValue(request.getInputStream());
                 Authentication authentication = new UsernamePasswordAuthenticationToken(
                     userData.getName(),
                     userData.getPassword());
