@@ -41,7 +41,7 @@ flowchart LR
 |---|---|---|
 | `.github/workflows/ci.yml` | Called by the two workflows below (`workflow_call`) | Build, tests, coverage gate, SonarCloud gate, image build, Trivy gate, optional push |
 | `.github/workflows/pr.yml` | Every pull request into `main` | Runs `ci.yml`; image tag `pr-NUMBER-COMMIT`; pushes only for pull requests from branches of this repository |
-| `.github/workflows/deploy.yml` | Push to `main` (except documentation-only changes), manual run | Runs `ci.yml`, then releases the image as a new revision |
+| `.github/workflows/deploy.yml` | Push to `main` that changes the app, its template or the release tooling (`paths` list: application code, `infra/app.bicep`, `infra/app.bicepparam`, `infra/modules/containerapp.bicep`, smoke test, scan exceptions, `ci.yml`, `deploy.yml`, the revision script); manual run | Runs `ci.yml`, then releases the image as a new revision. Infrastructure, schedule and documentation changes release nothing |
 | `.github/workflows/schedule.yml` | Cron on weekdays, manual run (start or stop) | Working-hours schedule of the cost rule |
 | `.github/scripts/aca-revision.sh` | Sourced by deploy and schedule | Revision helpers: current revision, exact traffic split, bounded waits, deactivation |
 | `test-endpoints.sh` | Deploy job | Smoke test; exits non-zero on any failed check and deletes its test data |
@@ -111,6 +111,12 @@ everything on at night; a **stop** acts only outside the working window (weekday
 interrupt work. Skipped runs say why in their summary. Manual runs always act. The decision logic was tested with
 eleven cases (on time, late, past midnight, weekend, next working day).
 
+In the night of 16-17 Nov the check proved its worth: Monday's 14:15 start arrived about 10 hours late (00:05 IST)
+and was skipped; the 22:00 stop arrived about 8 hours late (05:51 IST), so the database and one idle replica ran
+through the night (well under 1 USD). GitHub's scheduler is therefore not reliable enough for cost control on its own:
+moving start and stop into Azure (a scheduled Container Apps job using the pipeline identity) is the recommended next
+step; until then, the engineer runs `stop` manually at the end of the day when it matters.
+
 ## 6. Security of the pipeline
 
 - **Azure login without a password (OIDC).** GitHub issues each run a short-lived signed token describing the run.
@@ -152,6 +158,7 @@ eleven cases (on time, late, past midnight, weekend, next working day).
 | Pull request #4, first run | Build, tests, SonarCloud, image and scan passed; **Azure login failed** (`AADSTS700213`) | GitHub's token subject contains the numeric owner and repository ids; the credentials had the name-only form. Fixed in the Bicep parameters (pull request #4) |
 | Pull request #4, second run | All green; image `pr-4-ff9bd93` pushed through OIDC | Login and push work without a stored password |
 | First `deploy` on `main` | **Stopped at the SonarCloud quality gate**; Azure untouched | The first analysis of `main` judged existing code: security rating D from rule java:S4502 ("CSRF protection disabled"). Reviewed as not applicable (stateless API, token only in the Authorization header, no cookies) and documented in the code with `@SuppressWarnings("java:S4502")` and the reason (pull request #5) |
+| Releases of pull requests #7-#13 (16 Nov) | All successful, about 10 minutes each | From pull request #8 on, the release deploys the app's own template (`infra/app.bicep`); pull request #12's release applied the Flyway migration V3 to the cloud database while the old revision kept serving; pull request #13's release ran under load (zero-downtime test, [06-load-test.md](06-load-test.md), section 8) |
 | `deploy` after pull request #5 | **Success** in 13.4 minutes: build 127 s, image 122 s, release 324 s; rollback skipped | New revision `trebol-api--r2-1-63ac839` with 100% of the traffic and 1 healthy replica; previous revision deactivated with 0 replicas; traffic list with exactly one entry; public health endpoints 200; no test data left behind |
 
 ## 9. Operating the pipeline
@@ -174,4 +181,4 @@ eleven cases (on time, late, past midnight, weekend, next working day).
 | Canary signal | Readiness and health of the new revision during 2 minutes at 10% (little real traffic outside tests) | Error rate and latency from Application Insights as promotion criteria (monitoring phase) |
 | Required checks not strict | A pull request does not have to be up to date with `main` before merging | The release re-runs all gates on the merge commit anyway; enable "strict" if merges become frequent |
 | SonarCloud first-analysis behaviour | The first analysis of a branch judges existing code | Nothing to do: later analyses judge new code only |
-| Scheduler timing | GitHub scheduled runs can start hours late; backup triggers and the clock check limit the effect | An Azure Container Apps scheduled job (runs inside Azure, on time) if the delays continue |
+| Scheduler timing | GitHub scheduled runs started 5.5 to 10 hours late; backup triggers and the clock check prevent wrong starts, but a late stop leaves resources running | **Recommended:** an Azure Container Apps scheduled job (runs inside Azure, on time) |

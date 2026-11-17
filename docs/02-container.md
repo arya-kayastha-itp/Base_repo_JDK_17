@@ -10,7 +10,7 @@ image built from commit `b393abe` (Spring Boot 3.5.16) and the scan exceptions o
 | Requirement | How it is met | Evidence |
 |---|---|---|
 | Multi-stage Dockerfile | Three stages: build (Maven + JDK), extract (WAR layers), runtime (JRE only) | `trebol-backend-monolith/Dockerfile` |
-| Slim base image | Eclipse Temurin 17 **JRE** on Alpine 3.24 (68 MB) | Final image about 139 MB |
+| Slim base image | Eclipse Temurin 17 **JRE** on Alpine 3.24 (68 MB) | Final image about 139 MB; since Phase 5 plus the 46 MB monitoring agent (section 3) |
 | Non-root user | Fixed user and group id 10001; application files owned by root and read-only for the app | `id` in the container: `uid=10001`; writing to `/app`: `Permission denied` |
 | Only the required port | `EXPOSE 8080` only | `docker image inspect` |
 | Configuration through environment variables | No profile, URL or secret in the image: H2 by default, profile `azure` through environment variables | [01-analysis.md, section 7](01-analysis.md#7-configuration) |
@@ -48,6 +48,13 @@ image built from commit `b393abe` (Spring Boot 3.5.16) and the scan exceptions o
 | Exec-form `ENTRYPOINT` | Java is the container's main process (PID 1) and receives the platform's stop signal (SIGTERM) directly, which graceful shutdown needs | Shell form (`/bin/sh -c ...`), where the shell receives the signal instead |
 | `JAVA_TOOL_OPTIONS` | `MaxRAMPercentage=75`: the heap follows the container's memory (1536 MB at 2 GiB). `ExitOnOutOfMemoryError`: a JVM out of memory exits and the platform restarts the container. `file.encoding=UTF-8`: independent of the base image's locale. Can be replaced at run time | Fixed `-Xmx`, which must be changed with every container size |
 | No `HEALTHCHECK` instruction | Container Apps and Kubernetes use their own HTTP probes on `/actuator/health/liveness` and `/readiness`; compose defines its own health check | A Dockerfile `HEALTHCHECK`, which these platforms ignore |
+
+**Monitoring agent (added in Phase 5).** The build stage also downloads the Azure Application Insights Java agent
+3.7.10 through Maven (Maven Central checksums) and checks it against a pinned SHA-256; the runtime image contains it
+as `/app/applicationinsights-agent.jar`, owned by root. It is **not** loaded by default: in Azure the app sets
+`JDK_JAVA_OPTIONS=-javaagent:/app/applicationinsights-agent.jar` (read by the `java` launcher in addition to
+`JAVA_TOOL_OPTIONS`) and the connection string, so local runs behave exactly as before. The agent adds about 4 s to
+the startup and no critical or high findings to the scan. See [05-scaling-monitoring.md](05-scaling-monitoring.md).
 
 Image layers as reported by `docker history`: dependencies 78.1 MB, Spring Boot loader 0.7 MB, snapshot
 dependencies 4 kB (none today), application 2.1 MB.
