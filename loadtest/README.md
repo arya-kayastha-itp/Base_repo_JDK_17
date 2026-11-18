@@ -79,27 +79,42 @@ only.
 
 Rough throughput to expect: requests per second ≈ users / (think time + response time). With 10,000 users and
 about 2 s mean think time that is about 5,000 requests per second, plus the sign-ups during the ramp-up (10,000 over
-10 minutes is about 17 per second).
+10 minutes is about 17 per second). The agreed evaluation target is a peak of 2,500 requests per second, raised step
+by step; capacity per level and the expected break point: [docs/08-scalability-plan.md](../docs/08-scalability-plan.md).
 
 ## 5. Evaluation-window runbook
 
 The development setup is deliberately small (1 vCPU / 2 GiB replicas, at most 3, Burstable MySQL). For the official
-test it is scaled up for an agreed window and back down right after. Every Azure change is reviewed (what-if) and
+test one switch, `TREBOL_EVALUATION=true`, scales it up for the window, and removing it scales it back down:
+
+| Part | Development | `TREBOL_EVALUATION=true` | Set by |
+|---|---|---|---|
+| App replicas | 1 vCPU / 2 GiB, at most 3 | 2 vCPU / 4 GiB, at most 20 (40 of the environment's 100 cores) | Repository variable, read by the release (`infra/app.bicepparam`) |
+| MySQL | Burstable B1ms, 171 connections, fixed 360 IOPS | General Purpose D4ads_v5, 1,365 connections, Autoscale IOPS | Shell variable when the engineer deploys `infra/main.bicep` |
+| Log Analytics daily cap | 0.1 GB | 1 GB | Same deployment |
+| Alerts | replicas at 3, connections above 136 | replicas at 20, connections above 1,092 | Same deployment |
+
+Order matters because of the connections (20 replicas x 15 = 300, more than the 171 of the Burstable server):
+**up: database first, then the app; down: app first, then the database.** Changing the database size restarts it
+(usually 60-120 s), so it happens before the test, never during it. Every Azure change is previewed (what-if) and
 approved by the engineer before it runs.
 
 | When | Action | How |
 |---|---|---|
-| A day before | Agree the date and time (inside weekday 14:00-22:00 IST, or start everything by hand) | With the evaluators |
-| A day before | Replicas 2 vCPU / 4 GiB, maximum 25 | Pull request: `cpu`, `memory`, `maxReplicas` in `infra/app.bicepparam` and `alertMaxReplicas` in `infra/main.bicepparam` |
-| A day before | MySQL General Purpose (4 vCores) for the window: 25 replicas x 15 connections = 375, the Burstable server allows 171 | Parameter change in `infra/main.bicep`, deployed by the engineer |
-| Start of the window | Log Analytics daily cap raised (for example to 2 GB), so the dashboard keeps the whole test | `logAnalyticsDailyCapGb` in `infra/main.bicepparam` |
-| 15 minutes before | Minimum replicas 4-6 (warm capacity: a replica needs 13-45 s to start) | Repository variable `TREBOL_DAY_MIN_REPLICAS`, then the schedule's manual `start` |
-| During | Watch the workbook and the alerts | Azure portal, Monitor, Workbooks |
-| Right after | Everything back: minimum 1, maximum 3, 1 vCPU / 2 GiB, MySQL Burstable, cap 0.1 GB, variable back to 1 | The same files and variable, reverted |
+| About 90 minutes before | Environment on, warm minimum of 4 replicas | Repository variables `TREBOL_EVALUATION=true` and `TREBOL_DAY_MIN_REPLICAS=4`; the schedule's manual `start` (MySQL must be running for the next step) |
+| About 75 minutes before | MySQL General Purpose with Autoscale IOPS, cap 1 GB, alert limits | Engineer: `$env:TREBOL_EVALUATION = 'true'`, then what-if and deployment of `infra/main.bicep` |
+| About 60 minutes before | Replicas 2 vCPU / 4 GiB, at most 20 | A release reads the repository variable: merge the pending pull request, or run the `deploy` workflow by hand |
+| 15 minutes before | Check: readiness 200, a second catalog read answers `X-Cache: HIT`, the workbook shows 4 replicas | Browser or curl; Azure portal, Monitor, Workbooks |
+| During | Watch the workbook and the alerts; note when each limit is reached | [docs/08-scalability-plan.md](../docs/08-scalability-plan.md), section 6 |
+| Right after | App back: repository variables `TREBOL_EVALUATION=false`, `TREBOL_DAY_MIN_REPLICAS=1`, then the `deploy` workflow by hand | GitHub Actions |
+| Then | Database, cap and alerts back: deploy `infra/main.bicep` without the shell variable | Engineer (MySQL must be running) |
+| End of the day | The schedule's `stop` (or the manual `stop`) | GitHub Actions |
 
-Cost of the window (list prices, South India): at full scale about 5-6 USD per hour of replica compute
-(25 x 2 vCPU / 4 GiB), MySQL General Purpose about 0.4 USD per hour, plus requests. The project budget leaves room
-for roughly one to two hours at full scale: plan a single window of about one hour.
+Cost of a one-hour test (list prices, South India): replicas 0.22 USD per running hour each (about 2 USD for an
+average of 10, 4.3 USD if all 20 run the whole hour), requests 0.40 USD per million (about 1.8 USD for 4.5 million,
+3.6 USD at 2,500 per second for the full hour), MySQL D4ads_v5 0.48 USD per hour (about 1.2 USD for 2.5 hours
+including the preparation), Autoscale IOPS 0.30 USD per million I/O operations. Realistic total about 6 USD, worst
+case about 16 USD; the project budget has room for it.
 
 ## 6. Laptop checks (our part)
 

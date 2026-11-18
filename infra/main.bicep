@@ -81,6 +81,11 @@ param mysqlVersion string
 param mysqlAdminLogin string
 param mysqlDatabaseName string
 
+@description('MySQL compute (Burstable B1ms for development, General Purpose for the evaluation window) and Autoscale IOPS.')
+param mysqlSkuName string
+param mysqlSkuTier string
+param mysqlAutoIoScaling string
+
 @description('MySQL administrator password. Supplied by the parameter file from Key Vault; never logged.')
 @secure()
 param mysqlAdminPassword string
@@ -185,6 +190,9 @@ module mysql 'modules/mysql.bicep' = {
     delegatedSubnetId: resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, mysqlSubnetName)
     privateDnsZoneId: resourceId('Microsoft.Network/privateDnsZones', mysqlPrivateDnsZoneName)
     databaseName: mysqlDatabaseName
+    skuName: mysqlSkuName
+    skuTier: mysqlSkuTier
+    autoIoScaling: mysqlAutoIoScaling
   }
 }
 

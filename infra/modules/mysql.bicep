@@ -13,9 +13,20 @@ param tags object
 @description('MySQL version, for example "8.4" or "8.0.21".')
 param version string
 
-@description('Compute size and tier (development: Burstable B1ms).')
+@description('Compute size and tier (development: Burstable B1ms; evaluation: General Purpose D4ads_v5).')
 param skuName string = 'Standard_B1ms'
+@allowed([
+  'Burstable'
+  'GeneralPurpose'
+])
 param skuTier string = 'Burstable'
+
+@description('Storage IOPS: Disabled = fixed IOPS from the storage size (360 for 20 GiB); Enabled = Autoscale IOPS, up to the compute size maximum, billed per million I/O operations. Can be switched back.')
+@allowed([
+  'Disabled'
+  'Enabled'
+])
+param autoIoScaling string = 'Disabled'
 
 @description('Storage in GiB. Auto-grow is off so the cost stays fixed.')
 param storageSizeGB int = 20
@@ -54,7 +65,7 @@ resource server 'Microsoft.DBforMySQL/flexibleServers@2023-12-30' = {
     storage: {
       storageSizeGB: storageSizeGB
       autoGrow: 'Disabled'
-      autoIoScaling: 'Disabled'
+      autoIoScaling: autoIoScaling
     }
     backup: {
       backupRetentionDays: backupRetentionDays
